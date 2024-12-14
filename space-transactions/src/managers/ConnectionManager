@@ -1,0 +1,61 @@
+import * as THREE from 'three'
+
+export class ConnectionManager {
+  constructor() {
+    this.connections = new Map()
+    this.connectionGeometry = new THREE.BufferGeometry()
+    this.tempVector = new THREE.Vector3()
+  }
+
+  createConnection(sourceEntity, targetEntity) {
+    const id = `${sourceEntity.id}-${targetEntity.id}`
+    
+    // Return existing connection if already exists
+    if (this.connections.has(id)) {
+      return this.connections.get(id)
+    }
+
+    const connection = {
+      id,
+      sourceId: sourceEntity.id,
+      targetId: targetEntity.id,
+      sourcePosition: sourceEntity.position,
+      targetPosition: targetEntity.position,
+      strength: this.calculateConnectionStrength(sourceEntity, targetEntity),
+      color: this.determineConnectionColor(sourceEntity, targetEntity),
+      timestamp: Date.now()
+    }
+
+    this.connections.set(id, connection)
+    return connection
+  }
+
+  calculateConnectionStrength(sourceEntity, targetEntity) {
+    // Base strength on combined transaction amounts
+    const sourceAmount = sourceEntity.data?.amount || 0
+    const targetAmount = targetEntity.data?.amount || 0
+    return Math.min(1, Math.log10(sourceAmount + targetAmount) / 5)
+  }
+
+  determineConnectionColor(sourceEntity, targetEntity) {
+    // Use color based on transaction types and amounts
+    const isHighValue = 
+      (sourceEntity.data?.amount || 0) > 5000 || 
+      (targetEntity.data?.amount || 0) > 5000
+
+    return isHighValue ? '#ff9500' : '#00ffff'
+  }
+
+  removeConnection(connectionId) {
+    this.connections.delete(connectionId)
+  }
+
+  cleanup(maxAge = 30000) { // Remove connections older than 30 seconds
+    const now = Date.now()
+    for (const [id, connection] of this.connections.entries()) {
+      if (now - connection.timestamp > maxAge) {
+        this.removeConnection(id)
+      }
+    }
+  }
+}
